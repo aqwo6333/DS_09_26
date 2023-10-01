@@ -1,29 +1,23 @@
 #include <stdio.h>
 #include <stdlib.h>
+#define _CRT_SECURE_NO_WARNINGS
 
 typedef struct treeNode {
     int data;
     struct treeNode* left, * right;
 } treeNode;
 
-int visitNodes = 0;
-
-// Æ®¸® »ı¼º
-treeNode n14 = { 64, NULL, NULL };
-treeNode n13 = { 62, NULL, NULL };
-treeNode n12 = { 42, NULL, NULL };
-treeNode n11 = { 70, NULL, NULL};
-treeNode n10 = { 63, &n13, &n14};
-treeNode n9 = { 55, NULL, NULL};
-treeNode n8 = { 46, &n12, NULL};
-treeNode n7 = { 25, NULL, NULL};
-treeNode n6 = { 65, &n10, &n11};
-treeNode n5 = { 53, &n8, &n9};
-treeNode n4 = { 16, NULL, &n7};
-treeNode n3 = { 74, &n6, NULL};
-treeNode n2 = { 41, &n4, &n5};
-treeNode n1 = { 60, &n2, &n3};
-treeNode* root = &n1;
+treeNode* createNode(int data, treeNode* left, treeNode* right) {
+    treeNode* newNode = (treeNode*)malloc(sizeof(treeNode));
+    if (newNode == NULL) {
+        printf("ë©”ëª¨ë¦¬ í• ë‹¹ì— ì‹¤íŒ¨í–ˆìŠµë‹ˆë‹¤.\n");
+        exit(1);
+    }
+    newNode->data = data;
+    newNode->left = left;
+    newNode->right = right;
+    return newNode;
+}
 
 treeNode* minvalue_node(treeNode* node) {
     treeNode* curr = node;
@@ -37,43 +31,41 @@ treeNode* new_node(int key) {
     newNode->data = key;
     newNode->left = NULL;
     newNode->right = NULL;
-
     return newNode;
 }
 
-// ¹İº¹Àû ¹æ¹ı
-treeNode* search(treeNode* root, int key) {
-    visitNodes = 0;
+// ì¬ê·€ì  ë°©ë²•
+treeNode* search(treeNode* root, int key, int* visitNodes) {
+    if (root == NULL) return NULL;
+    (*visitNodes)++;
 
-    while (root != NULL) {
-        visitNodes++;
-
-        if (key == root->data)
-            return root;
-        else if (key < root->data)
-            root = root->left;
-        else
-            root = root->right;
-    }
-    return NULL;
+    if (key == root->data) return root;
+    else if (key < root->data)
+        return search(root->left, key, visitNodes);
+    else
+        return search(root->right, key, visitNodes);
 }
 
-treeNode* insert_node(treeNode* node, int key) {
-    if (node == NULL)
+treeNode* insert_node(treeNode* root, int key, int* visitNodes) {
+    (*visitNodes)++;
+    if (root == NULL)
         return new_node(key);
-    if (node->data > key)
-        node->left = insert_node(node->left, key);
-    else if (node->data < key)
-        node->right = insert_node(node->right, key);
-    return node;
+    if (key < root->data)
+        root->left = insert_node(root->left, key, visitNodes);
+    else if (key > root->data)
+        root->right = insert_node(root->right, key, visitNodes);
+
+    return root;
 }
 
-treeNode* delete_node(treeNode* root, int key) {
+treeNode* delete_node(treeNode* root, int key, int* visitNodes) {
     if (root == NULL) return root;
+    (*visitNodes)++;
+
     if (key < root->data)
-        root->left = delete_node(root->left, key);
+        root->left = delete_node(root->left, key, visitNodes);
     else if (key > root->data)
-        root->right = delete_node(root->right, key);
+        root->right = delete_node(root->right, key, visitNodes);
     else {
         if (root->left == NULL) {
             treeNode* temp = root->right;
@@ -87,55 +79,207 @@ treeNode* delete_node(treeNode* root, int key) {
         }
         treeNode* temp = minvalue_node(root->right);
         root->data = temp->data;
-        root->right = delete_node(root->right, temp->data);
+        root->right = delete_node(root->right, temp->data, visitNodes);
     }
     return root;
 }
 
-void inorder_iter(treeNode* root) {
-    if (root) {
-        inorder_iter(root->left);
+
+void inorder_iter(treeNode* root, int* visitNodes) {
+    if (root != NULL) {
+        inorder_iter(root->left, visitNodes);
         printf("%d ", root->data);
-        inorder_iter(root->right);
+        (*visitNodes)++;
+        inorder_iter(root->right, visitNodes);
     }
 }
 
-int main(void) {
-    printf(" s : °Ë»ö\n i : ³ëµå Ãß°¡\n d : ³ëµå »èÁ¦\n t : ÁßÀ§ ¼øÈ¸\n I : ³ëµå Ãß°¡(¹İº¹)\n D : ³ëµå »èÁ¦(¹İº¹)\n c : Á¾·á\n");
-    char item;
-    scanf_s(" %c", &item, sizeof(item));
+treeNode* insert_node_iter(treeNode* root, int key, int* visitNodes) {
+    (*visitNodes)++;
+    treeNode* newNode = createNode(key, NULL, NULL);
+    if (root == NULL)
+        return newNode;
+    treeNode* current = root;
+    treeNode* parent = NULL;
+    while (current != NULL) {
+        parent = current;
+        if (key < current->data)
+            current = current->left;
+        else if (key > current->data)
+            current = current->right;
+        else {
+            free(newNode);
+            return root;
+        }
+    }
+    if (key < parent->data)
+        parent->left = newNode;
+    else
+        parent->right = newNode;
+    return root;
+}
 
-    switch (item) {
+treeNode* delete_node_iter(treeNode* root, int key, int* visitNodes) {
+    treeNode* parent = NULL;
+    treeNode* current = root;
+
+    while (current != NULL) {
+        (*visitNodes)++;
+
+        if (key == current->data)
+            break;
+        parent = current;
+        if (key < current->data)
+            current = current->left;
+        else
+            current = current->right;
+    }
+    if (current == NULL)
+        return root;
+    if (current->left == NULL && current->right == NULL) {
+        if (current != root) {
+            if (parent->left == current)
+                parent->left = NULL;
+            else
+                parent->right = NULL;
+        }
+        else
+            root = NULL;
+        free(current);
+    }
+    else if (current->left == NULL) {
+        if (current != root) {
+            if (parent->left == current)
+                parent->left = current->right;
+            else
+                parent->right = current->right;
+        }
+        else
+            root = current->right;
+        free(current);
+    }
+    else if (current->right == NULL) {
+        if (current != root) {
+            if (parent->left == current)
+                parent->left = current->left;
+            else
+                parent->right = current->left;
+        }
+        else
+            root = current->left;
+        free(current);
+    }
+    else {
+        treeNode* temp = minvalue_node(current->right);
+        current->data = temp->data;
+        current->right = delete_node_iter(current->right, temp->data, visitNodes);
+    }
+    return root;
+}
+
+
+int main(void) {
+    // íŠ¸ë¦¬ ìƒì„±
+    treeNode* n14 = createNode(64, NULL, NULL);
+    treeNode* n13 = createNode(62, NULL, NULL);
+    treeNode* n12 = createNode(42, NULL, NULL);
+    treeNode* n11 = createNode(70, NULL, NULL);
+    treeNode* n10 = createNode(63, n13, n14);
+    treeNode* n9 = createNode(55, NULL, NULL);
+    treeNode* n8 = createNode(46, n12, NULL);
+    treeNode* n7 = createNode(25, NULL, NULL);
+    treeNode* n6 = createNode(65, n10, n11);
+    treeNode* n5 = createNode(53, n8, n9);
+    treeNode* n4 = createNode(16, NULL, n7);
+    treeNode* n3 = createNode(74, n6, NULL);
+    treeNode* n2 = createNode(41, n4, n5);
+    treeNode* n1 = createNode(60, n2, n3);
+
+    // ë£¨íŠ¸ ë…¸ë“œ ì„¤ì •
+    treeNode* root = n1;
+
+    int visitNodes = 0;
+
+    printf(" s : ê²€ìƒ‰\n i : ë…¸ë“œ ì¶”ê°€\n d : ë…¸ë“œ ì‚­ì œ\n t : ì¤‘ìœ„ ìˆœíšŒ\n I : ë…¸ë“œ ì¶”ê°€(ë°˜ë³µ)\n D : ë…¸ë“œ ì‚­ì œ(ë°˜ë³µ)\n c : ì¢…ë£Œ\n");
+    char item;
+    while (1) {
+        printf("ë©”ë‰´ ì…ë ¥ : ");
+        scanf_s(" %c", &item, sizeof(item));
+
+        switch (item) {
         case 's':
-            printf("°Ë»öÇÒ °ª ÀÔ·Â: ");
+            printf("ê²€ìƒ‰í•  ê°’ ì…ë ¥: ");
             int key_s = 0;
             scanf_s("%d", &key_s);
-            search(&root, key_s);
-            printf("¹æ¹®ÇÑ ³ëµåÀÇ ¼ö: %d\n", visitNodes);
-            printf("³ª¸ÓÁö ³ëµå: ");
-            inorder_iter(root->right);
+            treeNode* result_s = search(root, key_s, &visitNodes);
+            if (result_s) {
+                printf("ë°©ë¬¸í•œ ë…¸ë“œì˜ ìˆ˜: %d\n", visitNodes);
+                printf("ê²€ìƒ‰ ê²°ê³¼: %d\n", result_s->data);
+            }
+            else {
+                printf("ë…¸ë“œë¥¼ ì°¾ì„ ìˆ˜ ì—†ìŠµë‹ˆë‹¤.\n");
+            }
+            visitNodes = 0;
+            inorder_iter(root, &visitNodes);
             printf("\n");
             break;
         case 'i':
-            printf("»ğÀÔÇÒ °ª ÀÔ·Â: ");
+            printf("ì‚½ì…í•  ê°’ ì…ë ¥: ");
             int key_i = 0;
             scanf_s("%d", &key_i);
-            insert_node(&root, key_i);
+            root = insert_node(root, key_i, &visitNodes);
+            printf("ë°©ë¬¸í•œ ë…¸ë“œì˜ ìˆ˜: %d\n", visitNodes);
+            visitNodes = 0;
+            inorder_iter(root, &visitNodes);
+            printf("\n");
             break;
         case 'd':
-            printf("»èÁ¦ÇÒ °ª ÀÔ·Â: ");
+            printf("ì‚­ì œí•  ê°’ ì…ë ¥: ");
             int key_d = 0;
             scanf_s("%d", &key_d);
-            delete_node(&root, key_d);
+            root = delete_node(root, key_d, &visitNodes);
+            printf("ë°©ë¬¸í•œ ë…¸ë“œì˜ ìˆ˜: %d\n", visitNodes);
+            visitNodes = 0;
+            inorder_iter(root, &visitNodes);
+            printf("\n");
             break;
+
         case 't':
-            inorder_iter(&root);
+            printf("ì¤‘ìœ„ ìˆœíšŒ ê²°ê³¼: ");
+            visitNodes = 0;
+            inorder_iter(root, &visitNodes);
+            printf("\n");
+            printf("ë°©ë¬¸í•œ ë…¸ë“œì˜ ìˆ˜: %d\n", visitNodes);
+            printf("\n");
             break;
+        case 'I':
+            printf("ì‚½ì…í•  ê°’ ì…ë ¥: ");
+            int key_I = 0;
+            scanf_s("%d", &key_I);
+            root = insert_node_iter(root, key_I, &visitNodes);
+            printf("ë°©ë¬¸í•œ ë…¸ë“œì˜ ìˆ˜: %d\n", visitNodes);
+            visitNodes = 0;
+            inorder_iter(root, &visitNodes);
+            printf("\n");
+            break;
+        case 'D':
+            printf("ì‚­ì œí•  ê°’ ì…ë ¥: ");
+            int key_D = 0;
+            scanf_s("%d", &key_D);
+            root = delete_node_iter(root, key_D, &visitNodes);
+            printf("ë°©ë¬¸í•œ ë…¸ë“œì˜ ìˆ˜: %d\n", visitNodes);
+            visitNodes = 0;
+            inorder_iter(root, &visitNodes);
+            printf("\n");
+            break;
+
+        case 'c':
+            exit(0);
         default:
-            printf("error\n");
-                   
+            printf("ì˜ëª»ëœ ì…ë ¥ì…ë‹ˆë‹¤. ë‹¤ì‹œ ì‹œë„í•˜ì„¸ìš”.\n");
+            break;
+        }
     }
-        
 
     return 0;
 }
